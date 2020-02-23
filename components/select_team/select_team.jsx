@@ -25,10 +25,26 @@ import LogoutIcon from 'components/widgets/icons/fa_logout_icon';
 import FormattedMarkdownMessage from 'components/formatted_markdown_message';
 
 import SelectTeamItem from './components/select_team_item.jsx';
+import {gql} from "apollo-boost";
+import {useQuery} from "@apollo/react-hooks";
 
 const TEAMS_PER_PAGE = 200;
 const TEAM_MEMBERSHIP_DENIAL_ERROR_ID = 'api.team.add_members.user_denied';
 
+const LIST_CHANNELS = gql`
+    query MyQuery($teamId: String) {
+
+        channels(condition: {teamid: $teamId}) {
+            nodes {
+                id
+                displayname
+                name
+            }
+        }
+
+    }
+
+`;
 export default class SelectTeam extends React.Component {
     static propTypes = {
         currentUserId: PropTypes.string.isRequired,
@@ -116,6 +132,8 @@ export default class SelectTeam extends React.Component {
     };
 
     render() {
+        const qResult = useQuery(LIST_CHANNELS);
+
         const {
             currentUserIsGuest,
             canManageSystem,
@@ -129,7 +147,7 @@ export default class SelectTeam extends React.Component {
         } = this.props;
 
         let openContent;
-        if (this.state.loadingTeamId) {
+        if (this.state.loadingTeamId || qResult.loading) {
             openContent = <LoadingScreen/>;
         } else if (this.state.error) {
             openContent = (
@@ -154,7 +172,8 @@ export default class SelectTeam extends React.Component {
             );
         } else {
             let joinableTeamContents = [];
-            listableTeams.forEach((listableTeam) => {
+            console.log(qResult.data)
+            qResult.data.forEach((listableTeam) => {
                 if ((listableTeam.allow_open_invite && canJoinPublicTeams) || (!listableTeam.allow_open_invite && canJoinPrivateTeams)) {
                     joinableTeamContents.push(
                         <SelectTeamItem

@@ -6,6 +6,10 @@ import React from 'react';
 import {Overlay, Tooltip} from 'react-bootstrap';
 import {FormattedMessage} from 'react-intl';
 
+import {gql} from 'apollo-boost';
+
+import {Query} from '@apollo/react-components';
+
 import {browserHistory} from 'utils/browser_history';
 import {canManageMembers} from 'utils/channel_utils.jsx';
 import {Constants} from 'utils/constants';
@@ -18,6 +22,28 @@ import Popover from 'components/widgets/popover';
 import TeamMembersModal from 'components/team_members_modal';
 
 import PopoverListMembersItem from './popover_list_members_item';
+
+const membersQuery = gql`
+    query MyQuery($channelID: String) {
+        channelmembers(condition: {
+            channelid:$channelID
+        }) {
+            nodes {
+                userByUserid {
+                    nickname
+                    username
+                    id
+                    lastname
+                    firstname
+                    email
+                    props
+                    roles
+                }
+            }
+        }
+    }
+
+`;
 
 export default class PopoverListMembers extends React.Component {
     static propTypes = {
@@ -119,16 +145,6 @@ export default class PopoverListMembers extends React.Component {
 
     render() {
         const isDirectChannel = this.props.channel.type === Constants.DM_CHANNEL;
-
-        const items = this.state.sortedUsers.map((user) => (
-            <PopoverListMembersItem
-                key={user.id}
-                onItemClick={this.handleShowDirectChannel}
-                showMessageIcon={this.props.currentUserId !== user.id && !isDirectChannel}
-                status={this.props.statuses[user.id]}
-                user={user}
-            />
-        ));
 
         const channelIsArchived = this.props.channel.delete_at !== 0;
         let popoverButton;
@@ -280,7 +296,27 @@ export default class PopoverListMembers extends React.Component {
                                 ref={this.membersList}
                                 className='more-modal__list'
                             >
-                                {items}
+                                <Query
+                                    query={membersQuery}
+                                    variables={{channelID: this.props.channel.id}}
+                                >
+                                    {({data, loading, error}) => {
+                                        if (loading) {
+                                            return <div>loading</div>;
+                                        }
+                                        const members = data.channelmembers.nodes;
+                                        return members.map((u) => {
+                                            const user = u.userByUserid;
+                                            return (<PopoverListMembersItem
+                                                key={user.id}
+                                                onItemClick={this.handleShowDirectChannel}
+                                                showMessageIcon={this.props.currentUserId !== user.id && !isDirectChannel}
+                                                status={this.props.statuses[user.id]}
+                                                user={user}
+                                                    />);
+                                        });
+                                    }}</Query>
+
                             </div>
                         </div>
                         {popoverButton}

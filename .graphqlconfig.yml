@@ -1,0 +1,6 @@
+projects:
+  app:
+    schemaPath: dump.graphql
+    extensions:
+      endpoints:
+        default: http://localhost:5000/graphql
